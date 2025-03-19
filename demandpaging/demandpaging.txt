@@ -1,0 +1,636 @@
+ =========== FIFO.c=============================
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+
+int is_page_in_memory(int page, int frames[], int num_frames)
+{
+    for (int i = 0; i < num_frames; i++)
+    {
+        if (frames[i] == page)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void fifo_page_replacement(int reference_string[], int num_references, int num_frames)
+{
+    int frames[num_frames];
+    int page_faults = 0;
+    int next_frame = 0;
+
+    for (int i = 0; i < num_frames; i++)
+    {
+        frames[i] = -1;
+    }
+
+    printf("\nFIFO Page Replacement Algorithm:\n");
+    for (int i = 0; i < num_references; i++)
+    {
+        int page = reference_string[i];
+        printf("Accessing page %d: ", page);
+
+        if (!is_page_in_memory(page, frames, num_frames))
+        {
+            frames[next_frame] = page;
+            next_frame = (next_frame + 1) % num_frames;
+            page_faults++;
+            printf("Page Fault!\n");
+        }
+        else
+        {
+            printf("No Page Fault.\n");
+        }
+
+        printf("Memory Frames: ");
+        for (int j = 0; j < num_frames; j++)
+        {
+            if (frames[j] != -1)
+            {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+
+    printf("Total Page Faults (FIFO): %d\n", page_faults);
+}
+
+int main()
+{
+    int reference_string[] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int num_references = sizeof(reference_string) / sizeof(reference_string[0]);
+
+    int num_frames;
+    printf("Enter the number of memory frames: ");
+    scanf("%d", &num_frames);
+
+    fifo_page_replacement(reference_string, num_references, num_frames);
+
+    return 0;
+}
+
+=========================== LRU.c================================
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+
+int is_page_in_memory(int page, int frames[], int num_frames)
+{
+    for (int i = 0; i < num_frames; i++)
+    {
+        if (frames[i] == page)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void lru_page_replacement(int reference_string[], int num_references, int num_frames)
+{
+    int frames[num_frames];
+    int page_faults = 0;
+    int last_used[num_frames];
+    int current_time = 0;
+
+    for (int i = 0; i < num_frames; i++)
+    {
+        frames[i] = -1;
+        last_used[i] = -1;
+    }
+
+    printf("\nLRU Page Replacement Algorithm:\n");
+    for (int i = 0; i < num_references; i++)
+    {
+        int page = reference_string[i];
+        printf("Accessing page %d: ", page);
+
+        if (!is_page_in_memory(page, frames, num_frames))
+        {
+            int lru_page = -1, lru_time = current_time;
+            for (int j = 0; j < num_frames; j++)
+            {
+                if (frames[j] == -1 || last_used[j] < lru_time)
+                {
+                    lru_page = j;
+                    lru_time = last_used[j];
+                }
+            }
+            frames[lru_page] = page;
+            page_faults++;
+            printf("Page Fault!\n");
+        }
+        else
+        {
+            printf("No Page Fault.\n");
+        }
+
+        for (int j = 0; j < num_frames; j++)
+        {
+            if (frames[j] == page)
+            {
+                last_used[j] = current_time;
+                break;
+            }
+        }
+
+        current_time++;
+
+        printf("Memory Frames: ");
+        for (int j = 0; j < num_frames; j++)
+        {
+            if (frames[j] != -1)
+            {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+
+    printf("Total Page Faults (LRU): %d\n", page_faults);
+}
+
+int main()
+{
+    int reference_string[] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int num_references = sizeof(reference_string) / sizeof(reference_string[0]);
+
+    int num_frames;
+    printf("Enter the number of memory frames: ");
+    scanf("%d", &num_frames);
+
+    lru_page_replacement(reference_string, num_references, num_frames);
+
+    return 0;
+}
+
+=================================== OPT.c=========================
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+
+int find_next(int page_ref[], int current_pos, int num_pages, int page)
+{
+    for (int i = current_pos + 1; i < num_pages; i++)
+    {
+        if (page_ref[i] == page)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void OPT(int page_ref[], int num_pages, int n)
+{
+    int frames[MAX_FRAMES];
+    int page_faults = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        frames[i] = -1;
+    }
+
+    printf("\nOPT Page Replacement Algorithm:\n");
+
+    for (int i = 0; i < num_pages; i++)
+    {
+        int page = page_ref[i];
+        int found = 0;
+
+        for (int j = 0; j < n; j++)
+        {
+            if (frames[j] == page)
+            {
+                found = 1;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            int free_slot = -1;
+            for (int j = 0; j < n; j++)
+            {
+                if (frames[j] == -1)
+                {
+                    free_slot = j;
+                    break;
+                }
+            }
+
+            if (free_slot == -1)
+            {
+                int farthest = -1, replace_index = -1;
+                for (int j = 0; j < n; j++)
+                {
+                    int next_use = find_next(page_ref, i, num_pages, frames[j]);
+                    if (next_use == -1)
+                    {
+                        replace_index = j;
+                        break;
+                    }
+                    else if (next_use > farthest)
+                    {
+                        farthest = next_use;
+                        replace_index = j;
+                    }
+                }
+                frames[replace_index] = page;
+            }
+            else
+            {
+                frames[free_slot] = page;
+            }
+
+            page_faults++;
+            printf("Accessing page %d: Page Fault!\n", page);
+        }
+
+        printf("Memory Frames: ");
+        for (int j = 0; j < n; j++)
+        {
+            if (frames[j] != -1)
+            {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+    printf("Total Page Faults (OPT): %d\n", page_faults);
+}
+
+int main()
+{
+    int page_ref[] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int num_pages = sizeof(page_ref) / sizeof(page_ref[0]);
+    int n;
+
+    printf("Enter the number of memory frames: ");
+    scanf("%d", &n);
+
+    OPT(page_ref, num_pages, n);
+
+    return 0;
+}
+
+======================= MFU.c=================================
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+
+void MFU(int page_ref[], int num_pages, int n)
+{
+    int frames[MAX_FRAMES], frequency[MAX_FRAMES] = {0};
+    int page_faults = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        frames[i] = -1;
+    }
+
+    printf("\nMFU Page Replacement Algorithm:\n");
+
+    for (int i = 0; i < num_pages; i++)
+    {
+        int page = page_ref[i];
+        int found = 0;
+
+        for (int j = 0; j < n; j++)
+        {
+            if (frames[j] == page)
+            {
+                found = 1;
+                frequency[j]++;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            int free_slot = -1;
+            for (int j = 0; j < n; j++)
+            {
+                if (frames[j] == -1)
+                {
+                    free_slot = j;
+                    break;
+                }
+            }
+
+            if (free_slot == -1)
+            {
+                int max_freq = -1, replace_index = -1;
+                for (int j = 0; j < n; j++)
+                {
+                    if (frequency[j] > max_freq)
+                    {
+                        max_freq = frequency[j];
+                        replace_index = j;
+                    }
+                }
+                frames[replace_index] = page;
+                frequency[replace_index] = 1;
+            }
+            else
+            {
+                frames[free_slot] = page;
+                frequency[free_slot] = 1;
+            }
+
+            page_faults++;
+            printf("Accessing page %d: Page Fault!\n", page);
+        }
+
+        printf("Memory Frames: ");
+        for (int j = 0; j < n; j++)
+        {
+            if (frames[j] != -1)
+            {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+    printf("Total Page Faults (MFU): %d\n", page_faults);
+}
+
+int main()
+{
+    int page_ref[] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int num_pages = sizeof(page_ref) / sizeof(page_ref[0]);
+    int n;
+
+    printf("Enter the number of memory frames: ");
+    scanf("%d", &n);
+
+    MFU(page_ref, num_pages, n);
+
+    return 0;
+}
+
+
+===========================LFU.c===================================
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+
+void LFU(int page_ref[], int num_pages, int n)
+{
+    int frames[MAX_FRAMES], frequency[MAX_FRAMES] = {0};
+    int page_faults = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        frames[i] = -1;
+    }
+
+    printf("\nLFU Page Replacement Algorithm:\n");
+
+    for (int i = 0; i < num_pages; i++)
+    {
+        int page = page_ref[i];
+        int found = 0;
+
+        for (int j = 0; j < n; j++)
+        {
+            if (frames[j] == page)
+            {
+                found = 1;
+                frequency[j]++;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            int free_slot = -1;
+            for (int j = 0; j < n; j++)
+            {
+                if (frames[j] == -1)
+                {
+                    free_slot = j;
+                    break;
+                }
+            }
+
+            if (free_slot == -1)
+            {
+                int min_freq = 9999, replace_index = -1;
+                for (int j = 0; j < n; j++)
+                {
+                    if (frequency[j] < min_freq)
+                    {
+                        min_freq = frequency[j];
+                        replace_index = j;
+                    }
+                }
+                frames[replace_index] = page;
+                frequency[replace_index] = 1;
+            }
+            else
+            {
+                frames[free_slot] = page;
+                frequency[free_slot] = 1;
+            }
+
+            page_faults++;
+            printf("Accessing page %d: Page Fault!\n", page);
+        }
+
+        printf("Memory Frames: ");
+        for (int j = 0; j < n; j++)
+        {
+            if (frames[j] != -1)
+            {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+    printf("Total Page Faults (LFU): %d\n", page_faults);
+}
+
+int main()
+{
+    int page_ref[] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int num_pages = sizeof(page_ref) / sizeof(page_ref[0]);
+    int n;
+
+    printf("Enter the number of memory frames: ");
+    scanf("%d", &n);
+
+    LFU(page_ref, num_pages, n);
+
+    return 0;
+}
+
+==============================MRU.c============================
+##include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+#define MAX_PAGES 16
+
+void MRU(int page_ref[], int num_pages, int n) 
+{
+    int frames[MAX_FRAMES] = {-1, -1, -1};
+    int last_used[MAX_FRAMES] = {0};
+    int page_faults = 0;
+    int i, j;
+
+    printf("\nMRU Page Replacement Algorithm:\n");
+
+    for (i = 0; i < num_pages; i++)
+     {
+        int page = page_ref[i];
+        int found = 0;
+
+        for (j = 0; j < n; j++) 
+        {
+            if (frames[j] == page)
+             {
+                found = 1;
+                break;
+            }
+        }
+
+        if (!found)
+         {
+            int most_recent = -1;
+            int replace_index = -1;
+
+            for (j = 0; j < n; j++)
+             {
+                if (last_used[j] > most_recent)
+                 {
+                    most_recent = last_used[j];
+                    replace_index = j;
+                }
+            }
+
+            frames[replace_index] = page;
+            page_faults++;
+
+            last_used[replace_index] = i;
+
+            printf("Accessing page %d: Page Fault!\n", page);
+            printf("Memory Frames: ");
+            for (j = 0; j < n; j++) 
+            {
+                if (frames[j] != -1)
+                 {
+                    printf("%d ", frames[j]);
+                }
+            }
+            printf("\n");
+        }
+    }
+    printf("Total Page Faults (MRU): %d\n", page_faults);
+}
+
+int main()
+ {
+    int page_ref[MAX_PAGES] = {1,3,5,7,9,2,4,6,8,21,34,56,78,89,3,42};
+    int num_pages = 16;
+    int n;
+
+    printf("Enter the number of memory frames: ");
+    scanf("%d", &n);
+
+    MRU(page_ref, num_pages, n);
+
+    return 0;
+}
+
+=============================== SC.c=====================================
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+#define MAX_PAGES 16
+
+void SecondChance(int page_ref[], int num_pages, int n) 
+{
+    int frames[MAX_FRAMES] = {-1, -1, -1};
+    int reference_bit[MAX_FRAMES] = {0};
+    int page_faults = 0;
+    int i, j;
+    int pointer = 0;
+
+    printf("\nSecond Chance Page Replacement Algorithm:\n");
+
+    for (i = 0; i < num_pages; i++) 
+    {
+        int page = page_ref[i];
+        int found = 0;
+
+        for (j = 0; j < n; j++) 
+        {
+            if (frames[j] == page) 
+            {
+                found = 1;
+                reference_bit[j] = 1;
+                break;
+            }
+        }
+
+        if (!found) 
+        {
+            while (1) 
+            {
+                if (frames[pointer] == -1)
+                 {
+                    frames[pointer] = page;
+                    reference_bit[pointer] = 1;
+                    break;
+                } 
+                else if (reference_bit[pointer] == 0) 
+                {
+                    frames[pointer] = page;
+                    reference_bit[pointer] = 1;
+                    break;
+                }
+                 else
+                  {
+                    reference_bit[pointer] = 0;
+                }
+                pointer = (pointer + 1) % n;
+            }
+            page_faults++;
+            printf("Accessing page %d: Page Fault!\n", page);
+            printf("Memory Frames: ");
+            for (j = 0; j < n; j++)
+             {
+                if (frames[j] != -1) 
+                {
+                    printf("%d ", frames[j]);
+                }
+            }
+            printf("\n");
+        }
+    }
+    printf("Total Page Faults (Second Chance): %d\n", page_faults);
+}
+
+int main() 
+{
+    int page_ref[MAX_PAGES] = {1,3,5,7,9,2,4,6,8,21,34,56,78,89,3,42};
+    int num_pages = 16;
+    int n;
+
+    printf("Enter the number of memory frames: ");
+    scanf("%d", &n);
+
+    SecondChance(page_ref, num_pages, n);
+
+    return 0;
+} 
