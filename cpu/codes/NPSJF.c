@@ -1,135 +1,145 @@
- #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include <stdio.h>
+#include <stdbool.h>
 
-typedef struct
- {
-    char pname[20];  
-    int at, bt, ct, tat, wt, bt1;    
-} Process;
+#define MAX 30
 
-void accept_info(Process p[], int n)
- {
-    for (int i = 0; i < n; i++)
-     {
-        printf("Enter process name: ");
-        scanf("%s", p[i].pname);
+int main() {
+    int n, i, j, min_bt, min_index;
+    int p[MAX], at[MAX], bt[MAX], ct[MAX], wt[MAX], tat[MAX], completed[MAX] = {0};
+    float awt = 0, atat = 0;
+    int gantt_process[MAX], gantt_time[MAX], gantt_count = 0; // Arrays for Gantt Chart
 
-        printf("Enter arrival time: ");
-        scanf("%d", &p[i].at);
-
-        printf("Enter first CPU burst time: ");
-        scanf("%d", &p[i].bt);
-
-        p[i].bt1 = p[i].bt;
-    }
-}
-
-void sort_by_arrival(Process p[], int n)
- {
-    for (int i = 0; i < n - 1; i++) 
-    {
-        for (int j = i + 1; j < n; j++)
-         {
-            if (p[i].at > p[j].at) 
-            {
-                Process temp = p[i];
-                p[i] = p[j];
-                p[j] = temp;
-            }
-        }
-    }
-}
-
-int find_next_process(Process p[], int n, int time) 
-{
-    int shortest = -1;
-    for (int i = 0; i < n; i++)
-     {
-        if (p[i].bt1 > 0 && p[i].at <= time) 
-        {
-            if (shortest == -1 || p[i].bt1 < p[shortest].bt1) 
-            {
-                shortest = i;
-            }
-        }
-    }
-    return shortest;
-}
-
-void simulate_sjf(Process p[], int n) 
-{
-    int time = 0, completed = 0;
-    while (completed < n) 
-    {
-        int idx = find_next_process(p, n, time);
-        if (idx == -1) 
-        {
-            time++;
-            continue;
-        }
-
-        time += p[idx].bt1;
-        p[idx].ct = time;
-        p[idx].tat = p[idx].ct - p[idx].at;
-        p[idx].wt = p[idx].tat - p[idx].bt;
-        p[idx].bt1 = 0;
-        completed++;
-        time += 2;  
-        p[idx].bt1 = rand() % 10 + 1;  
-    }
-}
-
-void print_output(Process p[], int n)
- {
-    float avg_tat = 0, avg_wt = 0;
-    printf("\nProcess\tAT\tBT\tCT\tTAT\tWT\n");
-    for (int i = 0; i < n; i++) 
-    {
-        printf("%s\t%d\t%d\t%d\t%d\t%d\n", p[i].pname, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
-        avg_tat += p[i].tat;
-        avg_wt += p[i].wt;
-    }
-    printf("\nAverage Turnaround Time = %.2f\n", avg_tat / n);
-    printf("Average Waiting Time = %.2f\n", avg_wt / n);
-}
-
-void print_gantt_chart(Process p[], int n) 
-{
-    printf("\nGantt Chart:\n");
-    int time = 0;
-    for (int i = 0; i < n; i++)
-    {
-        if (time < p[i].at) 
-        {
-            printf("| Idle (%d-%d) ", time, p[i].at);
-            time = p[i].at;
-        }
-        printf("| %s (%d-%d) ", p[i].pname, time, time + p[i].bt);
-        time += p[i].bt;
-        printf("| I/O (%d-%d) ", time, time + 2);
-        time += 2;
-    }
-    printf("|\n");
-}
-
-int main()
- {
-    srand(time(0));
-    int n;
-
-    printf("Enter number of processes: ");
+    // Input: Number of Processes
+    printf("Enter the number of processes: ");
     scanf("%d", &n);
 
-    Process p[n];
-    accept_info(p, n);
+    // Taking input for process numbers
+    printf("Enter the process numbers: ");
+    for (i = 0; i < n; i++) {
+        scanf("%d", &p[i]);
+    }
 
-    sort_by_arrival(p, n);
+    // Taking input for arrival times of processes
+    printf("Enter the arrival time for each process: ");
+    for (i = 0; i < n; i++) {
+        scanf("%d", &at[i]);
+    }
 
-    simulate_sjf(p, n);
+    // Taking input for burst times of processes
+    printf("Enter the burst time for each process: ");
+    for (i = 0; i < n; i++) {
+        scanf("%d", &bt[i]);
+    }
 
-    print_output(p, n);
-    
-    print_gantt_chart(p, n);
+    // Sorting processes based on arrival time using Bubble Sort
+    for (i = 0; i < n - 1; i++) {
+        for (j = 0; j < n - i - 1; j++) {
+            if (at[j] > at[j + 1]) {
+                // Swap arrival times
+                int temp = at[j];
+                at[j] = at[j + 1];
+                at[j + 1] = temp;
+
+                // Swap burst times
+                temp = bt[j];
+                bt[j] = bt[j + 1];
+                bt[j + 1] = temp;
+
+                // Swap process IDs
+                temp = p[j];
+                p[j] = p[j + 1];
+                p[j + 1] = temp;
+            }
+        }
+    }
+
+    // Start execution based on SJF logic
+    int time = 0, completed_count = 0;
+    while (completed_count < n) {
+        min_bt = 9999;
+        min_index = -1;
+
+        // Find the shortest job available at current time
+        for (j = 0; j < n; j++) {
+            if (!completed[j] && at[j] <= time) {
+                if (bt[j] < min_bt) {
+                    min_bt = bt[j];
+                    min_index = j;
+                }
+            }
+        }
+
+        if (min_index == -1) {
+            // If no process is available, CPU remains idle
+            gantt_process[gantt_count] = -1;  // Represent idle state
+            gantt_time[gantt_count++] = time;
+            time++;
+        } else {
+            // Execute the selected process
+            time += bt[min_index];
+            ct[min_index] = time;
+            completed[min_index] = 1;
+            completed_count++;
+
+            // Store process execution for Gantt Chart
+            gantt_process[gantt_count] = p[min_index];
+            gantt_time[gantt_count++] = time;
+        }
+    }
+
+    // Calculate TAT and WT
+    for (i = 0; i < n; i++) {
+        tat[i] = ct[i] - at[i];
+        atat += tat[i];
+
+        wt[i] = tat[i] - bt[i];
+        awt += wt[i];
+    }
+
+    awt /= n;
+    atat /= n;
+
+    // Display Results
+    printf("\nProcess\tAT\tBT\tCT\tTAT\tWT\n");
+    for (i = 0; i < n; i++) {
+        printf("P%d\t%d\t%d\t%d\t%d\t%d\n", p[i], at[i], bt[i], ct[i], tat[i], wt[i]);
+    }
+
+    printf("\nAverage Waiting Time: %.2f", awt);
+    printf("\nAverage Turnaround Time: %.2f\n", atat);
+
+    // Print Gantt Chart
+    printf("\nGantt Chart:\n");
+
+    // Print upper border
+    printf(" ");
+    for (i = 0; i < gantt_count; i++) {
+        printf("--------");
+    }
+    printf("\n|");
+
+    // Print process execution
+    for (i = 0; i < gantt_count; i++) {
+        if (gantt_process[i] == -1) {
+            printf(" Idle  |");
+        } else {
+            printf(" P%d  |", gantt_process[i]);
+        }
+    }
+
+    // Print lower border
+    printf("\n ");
+    for (i = 0; i < gantt_count; i++) {
+        printf("--------");
+    }
+
+    // Print timeline
+    printf("\n0");
+    for (i = 0; i < gantt_count; i++) {
+        printf("\t%d", gantt_time[i]);
+    }
+    printf("\n");
+
     return 0;
 }
+ 
