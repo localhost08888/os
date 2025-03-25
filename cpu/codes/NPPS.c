@@ -1,140 +1,136 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <string.h>
 
-typedef struct
-{
-    char pname[20];
-    int at, bt, orig_bt;
-    int ct, tat, wt;
-    int priority;
-} Process;
+#define MAX 30
 
-void accept_info(Process p[], int n)
-{
-    for (int i = 0; i < n; i++)
-    {
-        printf("Enter process name: ");
-        scanf("%s", p[i].pname);
+int main() {
+    int n, i, j;
+    int p[MAX], at[MAX], bt[MAX], ct[MAX], wt[MAX], tat[MAX], priority[MAX];
+    float awt = 0, atat = 0;
 
-        printf("Enter arrival time: ");
-        scanf("%d", &p[i].at);
+    printf("Enter the number of processes: ");
+    scanf("%d", &n);
 
-        printf("Enter burst time: ");
-        scanf("%d", &p[i].bt);
-        p[i].orig_bt = p[i].bt;
-
-        printf("Enter priority (lower number indicates higher priority): ");
-        scanf("%d", &p[i].priority);
+    printf("Enter process numbers: ");
+    for (i = 0; i < n; i++) {
+        scanf("%d", &p[i]);
     }
-}
 
-int find_next_process(Process p[], int n, int time)
-{
-    int highest_priority = 9999;
-    int idx = -1;
-    for (int i = 0; i < n; i++)
-    {
-        if (p[i].at <= time && p[i].bt > 0)
-        {
-            if (p[i].priority < highest_priority)
-            {
-                highest_priority = p[i].priority;
-                idx = i;
+    printf("Enter arrival time for each process: ");
+    for (i = 0; i < n; i++) {
+        scanf("%d", &at[i]);
+    }
+
+    printf("Enter burst time for each process: ");
+    for (i = 0; i < n; i++) {
+        scanf("%d", &bt[i]);
+    }
+
+    printf("Enter priority for each process (lower number means higher priority): ");
+    for (i = 0; i < n; i++) {
+        scanf("%d", &priority[i]);
+    }
+
+    // Sort processes based on arrival time, then priority if arrival times are the same
+    for (i = 0; i < n - 1; i++) {
+        for (j = 0; j < n - i - 1; j++) {
+            if (at[j] > at[j + 1] || (at[j] == at[j + 1] && priority[j] > priority[j + 1])) {
+                // Swap arrival time
+                int temp = at[j];
+                at[j] = at[j + 1];
+                at[j + 1] = temp;
+
+                // Swap burst time
+                temp = bt[j];
+                bt[j] = bt[j + 1];
+                bt[j + 1] = temp;
+
+                // Swap priority
+                temp = priority[j];
+                priority[j] = priority[j + 1];
+                priority[j + 1] = temp;
+
+                // Swap process numbers
+                temp = p[j];
+                p[j] = p[j + 1];
+                p[j + 1] = temp;
             }
         }
     }
-    return idx;
-}
 
-void simulate_priority(Process p[], int n)
-{
     int time = 0, completed = 0;
-    while (completed < n)
-    {
-        int idx = find_next_process(p, n, time);
-        if (idx == -1)
-        {
-            time++;
-            continue;
+    int isCompleted[MAX] = {0}; // Track completed processes
+
+    while (completed < n) {
+        int minPriority = 9999, idx = -1;
+
+        for (i = 0; i < n; i++) {
+            if (at[i] <= time && !isCompleted[i]) {
+                if (priority[i] < minPriority) {
+                    minPriority = priority[i];
+                    idx = i;
+                }
+            }
         }
 
-        time += p[idx].bt;
-        p[idx].ct = time;
-        p[idx].tat = p[idx].ct - p[idx].at;
-        p[idx].wt = p[idx].tat - p[idx].orig_bt;
-        p[idx].bt = 0;
-        completed++;
+        if (idx == -1) {
+            time++;
+        } else {
+            time += bt[idx];
+            ct[idx] = time;
+            tat[idx] = ct[idx] - at[idx];
+            wt[idx] = tat[idx] - bt[idx];
 
-        time += 2;
+            awt += wt[idx];
+            atat += tat[idx];
+            isCompleted[idx] = 1; 
+            completed++;
+        }
     }
-}
 
-void print_output(Process p[], int n)
-{
-    float avg_tat = 0, avg_wt = 0;
+    awt /= n;
+    atat /= n;
+
     printf("\nProcess\tAT\tBT\tPriority\tCT\tTAT\tWT\n");
-
-    for (int i = 0; i < n; i++)
-    {
-        printf("%s\t%d\t%d\t%d\t\t%d\t%d\t%d\n",
-               p[i].pname, p[i].at, p[i].orig_bt, p[i].priority,
-               p[i].ct, p[i].tat, p[i].wt);
-        avg_tat += p[i].tat;
-        avg_wt += p[i].wt;
+    for (i = 0; i < n; i++) {
+        printf("P%d\t%d\t%d\t%d\t\t%d\t%d\t%d\n", p[i], at[i], bt[i], priority[i], ct[i], tat[i], wt[i]);
     }
-    printf("\nAverage Turnaround Time = %.2f\n", avg_tat / n);
-    printf("Average Waiting Time = %.2f\n", avg_wt / n);
-}
 
-void print_gantt_chart(Process p[], int n)
-{
-    Process proc[n];
-    for (int i = 0; i < n; i++)
-    {
-        proc[i] = p[i];
-        proc[i].bt = proc[i].orig_bt;
-    }
+    printf("\nAverage Waiting Time: %.2f", awt);
+    printf("\nAverage Turnaround Time: %.2f\n", atat);
 
     printf("\nGantt Chart:\n");
-    int time = 0, completed = 0;
-
-    while (completed < n)
-    {
-        int idx = find_next_process(proc, n, time);
-        if (idx == -1)
-        {
-            printf("| Idle (%d-%d) ", time, time + 1);
-            time++;
-        }
-        else
-        {
-
-            printf("| %s (%d-%d) ", proc[idx].pname, time, time + proc[idx].bt);
-            time += proc[idx].bt;
-
-            proc[idx].bt = 0;
-            completed++;
-
-            printf("| I/O (%d-%d) ", time, time + 2);
-            time += 2;
-        }
+    printf(" ");
+    for (i = 0; i < n; i++) {
+        printf("-------");
     }
-    printf("|\n");
-}
+    printf("\n|");
 
-int main()
-{
-    int n;
-    printf("Enter number of processes: ");
-    scanf("%d", &n);
-    Process p[n];
+    time = 0;
+    for (i = 0; i < n; i++) {
+        if (time < at[i]) {
+            printf(" Idle |");
+            time = at[i];
+        }
+        printf(" P%d |", p[i]);
+        time += bt[i];
+    }
 
-    accept_info(p, n);
-    simulate_priority(p, n);
-    print_output(p, n);
-    print_gantt_chart(p, n);
+    printf("\n ");
+    for (i = 0; i < n; i++) {
+        printf("-------");
+    }
+
+    printf("\n0");
+    time = 0;
+    for (i = 0; i < n; i++) {
+        if (time < at[i]) {
+            printf("\t%d", at[i]);
+            time = at[i];
+        }
+        time += bt[i];
+        printf("\t%d", time);
+    }
+    printf("\n");
 
     return 0;
 }
