@@ -5,12 +5,13 @@
 #include <string.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <fcntl.h>
 
-void  maketokens(char *s, char *tok[]) 
+void maketokens(char *s, char *tok[]) 
 {
     int i = 0;
     char *p = strtok(s, " \n");
-    while (p != NULL) 
+    while (p != NULL)  
     {
         tok[i++] = p;
         p = strtok(NULL, " \n");
@@ -18,179 +19,150 @@ void  maketokens(char *s, char *tok[])
     tok[i] = NULL;
 }
 
-void search(char mode, const char *filename, const char *pattern) 
+void search(char mode, const char *filename, const char *pattern)  
 {
     FILE *fp = fopen(filename, "r");
-    if (!fp) 
-    {
-        printf("File not found.\n" );
-        return;
-    }
-
-    char line[1024];
-    int line_num = 0, count = 0;
+    char line[500];
+    int linenum = 0, count = 0;
 
     while (fgets(line, sizeof(line), fp)) 
     {
-        line_num++;
-        if (strstr(line, pattern))
-         {
-            if (mode == 'f') 
-             {
-                printf("First occurrence at line %d: %s", line_num, line);
-                fclose(fp);
-                return;
-             }
-             else if (mode == 'a') 
-             {
-                printf("Occurrence at line %d: %s", line_num, line);
-             } 
-            else if (mode == 'c')
-             {
+        linenum++;
+        if (strstr(line, pattern))  
+        {
+            if (mode == 'f')  
+            {
+                printf("First occurrence at line %d: %s", linenum, line);
+                break;
+            }
+            else if (mode == 'a')  
+            {
+                printf("Occurrence at line %d: %s", linenum, line);
+            }
+            else if (mode == 'c') 
+            {
                 count++;
-             }
+            }
         }
     }
 
-    if (mode == 'c')
-     {
+    if (mode == 'c')  
         printf("Pattern found %d times.\n", count);
-     }
-      else if (mode == 'f') 
-      {
+    else if (mode == 'f' && count == 0)  
         printf("Pattern not found.\n");
-      }
+
     fclose(fp);
 }
 
-void typeline(char mode, int n, const char *filename) 
+void typeline(char mode, int n, const char *filename)  
 {
     FILE *fp = fopen(filename, "r");
-    if (!fp)
-     {
-        printf("File  not found.\n" );
-        return;
-     }
-
-    char lines[1024][1024];
+    char line[500];
     int line_count = 0;
 
-    while (fgets(lines[line_count], sizeof(lines[line_count]), fp))
-     {
-        line_count++;
+    if (mode == '-')  
+    {
+        while (fgets(line, sizeof(line), fp))
+            line_count++;
+        rewind(fp);
     }
 
-    if (mode == 'a')
-     {
-        for (int i = 0; i < line_count; i++) 
-        {
-            printf("%s", lines[i]);
-        }
-    } 
-    else if (mode == 'n')
-     {
-        for (int i = 0; i < n && i < line_count; i++) 
-        {
-            printf("%s", lines[i]);
-        }
-    } 
-    else if (mode == '-') 
+    int printed = 0;
+    while (fgets(line, sizeof(line), fp))  
     {
-        for (int i = (line_count - n < 0 ? 0 : line_count - n); i < line_count; i++)
-         {
-            printf("%s", lines[i]);
-         }
+        if (mode == 'a' || (mode == 'n' && printed < n) ||  (mode == '-' && line_count - printed <= n))
+        {  
+            printf("%s", line);
+        }
+        printed++;
     }
+
     fclose(fp);
 }
 
-void list(char mode, const char *dirname)
- {
+void list(char mode, const char *dirname)  
+{
     DIR *dir = opendir(dirname);
-    if (!dir)
-     {
-        printf("Directory %s not found.\n", dirname);
+    if (!dir)  
+    {
+        printf("Directory not found: %s\n", dirname);
         return;
     }
 
     struct dirent *entry;
     int count = 0;
 
-    while ((entry = readdir(dir)) != NULL) 
+    while ((entry = readdir(dir)) != NULL)  
     {
-        count++;
-        if (mode == 'n')
-         {
+        if (mode == 'c')
+            count++;
+        else if (mode == 'n')
             printf("%s\n", entry->d_name);
-        } 
         else if (mode == 'i')
-         {
-            printf("Filename: %s, Inode: %ld\n", entry->d_name, entry->d_ino);
-        }
+            printf("%s (Inode: %ld)\n", entry->d_name, entry->d_ino);
     }
 
-    if (mode == 'n' && count == 0)
-     {
-        printf("No entries found.\n");
-    }
-     else if (mode == 'c') 
-     {
+    if (mode == 'c')
         printf("Total entries: %d\n", count);
-    }
+
     closedir(dir);
 }
 
-int main() 
+void count(const char *filename, char option) 
+{
+    int file = open(filename, O_RDONLY);
+    int chars = 0, words = 0, lines = 0;
+    char c, prev = ' ';
+
+    while (read(file, &c, 1) > 0)  
+    {
+        chars++;
+        if (c == ' ' || c == '\n')
+        {
+            if (prev != ' ' && prev != '\n')
+                words++;
+        }
+        if (c == '\n')
+            lines++;
+        prev = c;
+    }
+    close(file);
+
+    if (option == 'c')  
+        printf("Characters: %d\n", chars);
+    else if (option == 'w')  
+        printf("Words: %d\n", words);
+    else if (option == 'l')  
+        printf("Lines: %d\n", lines);
+    else printf("Invalid option! Use 'c', 'w', or 'l'.\n");
+}
+
+int main()  
 {
     char buff[80], *args[10];
 
-    while (1) 
+    while (1)    
     {
         printf("myshell$ ");
         fflush(stdout);
-        if (!fgets(buff, sizeof(buff), stdin))
-         {
-            break; 
-        }
+
+        if (!fgets(buff, sizeof(buff), stdin))  
+            break;
+
         maketokens(buff, args);
+        if (!args[0])     
+            continue;    
 
-        if (args[0] == NULL)
-         {
-            continue; 
-        }
-
-        if (strcmp(args[0], "search") == 0) 
-        {
-            search(args[1][0], args[2], args[3]);
-        } 
+        if (strcmp(args[0], "search") == 0)
+            search(args[1][0], args[2], args[3]);  
         else if (strcmp(args[0], "typeline") == 0)
-         {
-            typeline(args[1][0], atoi(args[2]), args[3]);
-        }
-         else if (strcmp(args[0], "list") == 0) 
-        {
+            typeline(args[1][0], atoi(args[2]), args[3]);        
+        else if (strcmp(args[0], "list") == 0)
             list(args[1][0], args[2]);
-        } 
+        else if (strcmp(args[0], "count") == 0)
+            count(args[1], args[2][0]);  
         else 
-        {
-            pid_t pid = fork();
-            if (pid < 0) 
-            {
-                perror("Fork failed");
-            }
-             else if (pid > 0) 
-            {
-                wait(NULL); 
-            }
-             else 
-            {
-                if (execvp(args[0], args) == -1) 
-                {
-                    printf("Bad command.\n");
-                }
-                exit(EXIT_FAILURE);  
-            }
-        }
+            printf("Unknown command: %s\n", args[0]);
     }
 
     return 0;
